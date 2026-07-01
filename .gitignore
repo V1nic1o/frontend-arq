@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.local
+.env.production
+*.log
+.DS_Store
+tsconfig.tsbuildinfo
+tsconfig.node.tsbuildinfo
+.vite
