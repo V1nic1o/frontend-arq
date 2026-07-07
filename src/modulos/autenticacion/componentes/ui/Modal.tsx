@@ -7,12 +7,13 @@ type ModalProps = {
   titulo: string;
   onCerrar: () => void;
   children: ReactNode;
-  tamano?: 'md' | 'lg';
+  tamano?: 'md' | 'lg' | 'xl';
 };
 
 const TAMANOS_MODAL = {
   md: 'sm:max-w-md',
   lg: 'sm:max-w-lg',
+  xl: 'sm:max-w-5xl',
 } as const;
 
 export function Modal({ abierto, titulo, onCerrar, children, tamano = 'md' }: ModalProps) {

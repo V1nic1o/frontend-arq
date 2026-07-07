@@ -60,10 +60,84 @@ export type LineaCosto = {
 };
 
 export type SugerenciaCuantificacion = {
-  concepto: 'CONCRETO' | 'ACERO' | 'EXCAVACION';
+  concepto:
+    | 'CEMENTO'
+    | 'HIERRO'
+    | 'ARENA'
+    | 'PIEDRIN'
+    | 'MANO_OBRA'
+    | 'MAQUINARIA_EQUIPO';
   descripcion: string;
   cantidad: number;
   unidad: string;
+};
+
+export type CategoriaApuZapata = 'MATERIAL' | 'MAQUINARIA_EQUIPO' | 'MANO_OBRA';
+
+export type TipoLineaEquipo = 'CANTIDAD' | 'PORCENTAJE_MO';
+
+export type LineaApuZapata = {
+  categoria: CategoriaApuZapata;
+  codigo: string;
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  precioUnitario: number;
+  subtotal: number;
+  itemCatalogoId: string | null;
+  desdeCatalogo: boolean;
+  tipoLineaEquipo?: TipoLineaEquipo;
+  baseCalculo?: number;
+  baseCalculoEtiqueta?: string;
+};
+
+export type ContextoApuZapata = {
+  titulo: string;
+  unidadObra: string;
+  cantidad: number;
+  dimensiones: {
+    largo: number;
+    ancho: number;
+    espesor: number;
+    profundidad: number;
+  };
+  volumenFundicionM3: number;
+  volumenFundicionPorZapataM3: number;
+  volumenExcavacionM3: number;
+  pesoAceroKg: number;
+  resistenciaConcreto: number;
+  diametroAcero: string;
+};
+
+export type ParametrosApuZapata = {
+  rendimiento: number;
+  rendimientoUnidad: string;
+  rendimientoEtiqueta: string;
+  cuadrilla: string;
+  jornadaHoras: number;
+  consumoManoObra: number;
+  consumoManoObraUnidad: string;
+  consumoManoObraEtiqueta: string;
+};
+
+export type ResumenApuZapata = {
+  materiales: number;
+  maquinariaEquipo: number;
+  manoObra: number;
+  costoDirecto: number;
+  costosIndirectos: number;
+  total: number;
+  precioUnitario: number;
+  porcentajeCostosIndirectos: number;
+};
+
+export type ApuZapata = {
+  contexto?: ContextoApuZapata;
+  parametros?: ParametrosApuZapata;
+  lineas: LineaApuZapata[];
+  resumen: ResumenApuZapata;
+  supuestosTecnicos?: string[];
+  sugerenciasCuantificacion: SugerenciaCuantificacion[];
 };
 
 export type ElementoPresupuesto = {
@@ -74,6 +148,8 @@ export type ElementoPresupuesto = {
   lineasCosto?: LineaCosto[];
   resumenCostos?: ResumenCostos;
   totalElemento?: number;
+  sugerenciasCuantificacion?: SugerenciaCuantificacion[];
+  apuZapata?: ApuZapata | null;
 };
 
 export type PresupuestoDetalle = Presupuesto & {
@@ -86,6 +162,7 @@ export type ElementoPresupuestoDetalle = ElementoPresupuesto & {
   presupuestoId: string;
   presupuesto: Presupuesto;
   sugerenciasCuantificacion: SugerenciaCuantificacion[];
+  apuZapata?: ApuZapata | null;
 };
 
 export type LineasCostoRespuesta = {
@@ -93,6 +170,7 @@ export type LineasCostoRespuesta = {
   resumenCostos: ResumenCostos;
   totalElemento: number;
   sugerenciasCuantificacion: SugerenciaCuantificacion[];
+  apuZapata?: ApuZapata | null;
 };
 
 export type CrearPresupuestoEntrada = {
@@ -190,6 +268,10 @@ export function rutaPresupuestarElemento(presupuestoId: string, elementoId: stri
   return `/presupuestos/${presupuestoId}/elementos/${elementoId}`;
 }
 
+export function rutaCostoDesglosadoElemento(presupuestoId: string, elementoId: string) {
+  return `/presupuestos/${presupuestoId}/elementos/${elementoId}/costo-desglosado`;
+}
+
 export const ETIQUETAS_TIPO_LINEA: Record<TipoLineaCosto, string> = {
   MATERIAL: 'Materiales',
   MANO_OBRA: 'Mano de obra',
@@ -199,4 +281,45 @@ export const ETIQUETAS_TIPO_LINEA: Record<TipoLineaCosto, string> = {
 
 export function formatearMonto(valor: number | string) {
   return formatearQuetzales(valor);
+}
+
+export function descripcionElementoPresupuesto(elemento: ElementoPresupuesto): string {
+  if (elemento.tipo === 'ZAPATA') {
+    return 'Zapata';
+  }
+
+  return elemento.tipo;
+}
+
+export function detalleTecnicoElementoPresupuesto(elemento: ElementoPresupuesto): string | null {
+  if (!elemento.zapata) {
+    return null;
+  }
+
+  const zapata = elemento.zapata;
+  return `${Number(zapata.largo).toFixed(2)} × ${Number(zapata.ancho).toFixed(2)} × ${Number(zapata.espesor).toFixed(2)} m · f'c ${zapata.resistenciaConcreto} PSI · ${zapata.diametroAcero}`;
+}
+
+export function cantidadElementoPresupuesto(elemento: ElementoPresupuesto): number | null {
+  if (elemento.zapata) {
+    return elemento.zapata.cantidad;
+  }
+
+  return null;
+}
+
+export function unidadElementoPresupuesto(elemento: ElementoPresupuesto): string {
+  if (elemento.tipo === 'ZAPATA') {
+    return 'und';
+  }
+
+  return 'und';
+}
+
+export function subtotalElementoPresupuesto(elemento: ElementoPresupuesto): number {
+  if (elemento.apuZapata?.resumen?.total != null) {
+    return elemento.apuZapata.resumen.total;
+  }
+
+  return Number(elemento.totalElemento ?? 0);
 }

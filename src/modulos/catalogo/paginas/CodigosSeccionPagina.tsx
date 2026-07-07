@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Pencil, Plus, Trash2, Layers } from 'lucide-react';
 import { Boton } from '../../autenticacion/componentes/ui/Boton';
 import { Modal } from '../../autenticacion/componentes/ui/Modal';
@@ -26,6 +26,8 @@ import {
 
 export function CodigosSeccionPagina() {
   const { slug, seccionId } = useParams<{ slug: string; seccionId: string }>();
+  const [parametrosBusqueda] = useSearchParams();
+  const editarDesdeUrl = parametrosBusqueda.get('editar');
   const catalogo = slug ? obtenerCatalogoPorSlug(slug) : undefined;
   const [seccion, setSeccion] = useState<SeccionCatalogo | null>(null);
   const [items, setItems] = useState<ItemCatalogo[]>([]);
@@ -62,6 +64,17 @@ export function CodigosSeccionPagina() {
   useEffect(() => {
     void cargarDatos();
   }, [cargarDatos]);
+
+  useEffect(() => {
+    if (!editarDesdeUrl || items.length === 0) {
+      return;
+    }
+
+    const item = items.find((actual) => actual.id === editarDesdeUrl);
+    if (item) {
+      setItemEditar(item);
+    }
+  }, [editarDesdeUrl, items]);
 
   if (!catalogo || !seccionId) {
     return <Navigate to="/catalogo" replace />;

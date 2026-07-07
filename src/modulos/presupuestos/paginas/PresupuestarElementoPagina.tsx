@@ -11,6 +11,7 @@ import { LayoutPresupuesto } from '../componentes/LayoutPresupuesto';
 import { PasosFlujoPresupuesto } from '../componentes/PasosFlujoPresupuesto';
 import { formatearDecimal, ResultadoCalculadora } from '../componentes/ResultadoCalculadora';
 import { ResumenCostosPanel } from '../componentes/ResumenCostosPanel';
+import { TablaApuZapata } from '../componentes/TablaApuZapata';
 import {
   agregarLineaCosto,
   eliminarLineaCosto,
@@ -184,6 +185,12 @@ export function PresupuestarElementoPagina() {
               ))}
             </div>
           ) : null}
+        </Tarjeta>
+      ) : null}
+
+      {elemento?.apuZapata ? (
+        <Tarjeta titulo="Análisis de precio unitario (APU)">
+          <TablaApuZapata apu={elemento.apuZapata} />
         </Tarjeta>
       ) : null}
 

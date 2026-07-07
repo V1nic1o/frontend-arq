@@ -97,6 +97,10 @@ export function obtenerCatalogoPorSlug(slug: string) {
   return CATALOGOS_CONFIG.find((catalogo) => catalogo.slug === slug);
 }
 
+export function slugCatalogoPorTipo(tipo: TipoCatalogo) {
+  return CATALOGOS_CONFIG.find((catalogo) => catalogo.tipo === tipo)?.slug;
+}
+
 export function formatearQuetzales(valor: number | string) {
   return new Intl.NumberFormat('es-GT', {
     style: 'currency',

@@ -144,3 +144,58 @@ export async function actualizarComponenteRenglon(id: string, cantidad: number) 
 export async function eliminarComponenteRenglon(id: string) {
   await clienteApi.delete(`/catalogo/componentes/${id}`);
 }
+
+export type ResultadoInicializarApuZapata = {
+  creados: number;
+  existentes: number;
+  total: number;
+};
+
+export async function inicializarCatalogoApuZapata() {
+  const { data } = await clienteApi.post<RespuestaApi<ResultadoInicializarApuZapata>>(
+    '/catalogo/apu-zapata/inicializar',
+  );
+
+  return data.data;
+}
+
+export type VinculoApuZapata = {
+  codigoApu: string;
+  descripcionApu: string;
+  tipo: TipoCatalogo;
+  unidadApu: string;
+  itemCatalogoId: string | null;
+  itemCatalogo: {
+    id: string;
+    codigo: string;
+    descripcion: string;
+    unidad: string;
+    precioUnitario: number;
+    seccion: { id: string; nombre: string; tipo: TipoCatalogo };
+  } | null;
+  origen: 'VINCULO' | 'SUGERIDO' | 'SIN_VINCULAR';
+};
+
+export async function listarVinculosApuZapata() {
+  const { data } = await clienteApi.get<RespuestaApi<VinculoApuZapata[]>>(
+    '/catalogo/apu-zapata/vinculos',
+  );
+  return data.data;
+}
+
+export async function guardarVinculosApuZapata(
+  vinculos: { codigoApu: string; itemCatalogoId: string | null }[],
+) {
+  const { data } = await clienteApi.put<RespuestaApi<VinculoApuZapata[]>>(
+    '/catalogo/apu-zapata/vinculos',
+    { vinculos },
+  );
+  return data.data;
+}
+
+export async function sugerirVinculosApuZapata() {
+  const { data } = await clienteApi.post<
+    RespuestaApi<{ sugeridos: number; vinculos: VinculoApuZapata[] }>
+  >('/catalogo/apu-zapata/vinculos/sugerir');
+  return data.data;
+}

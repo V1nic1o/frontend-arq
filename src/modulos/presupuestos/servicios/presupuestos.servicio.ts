@@ -10,6 +10,7 @@ import type {
   RespuestaApiElementoPresupuesto,
   RespuestaApiPresupuesto,
   RespuestaApiPresupuestoDetalle,
+  ApuZapata,
 } from '../tipos/presupuestos.tipos';
 
 export async function listarPresupuestos() {
@@ -42,6 +43,17 @@ export async function cuantificarZapata(presupuestoId: string, entrada: Cuantifi
     entrada,
   );
   return data.data;
+}
+
+export async function previsualizarCuantificacionZapata(
+  presupuestoId: string,
+  entrada: CuantificarZapataEntrada,
+) {
+  const { data } = await clienteApi.post<RespuestaApi<{ apuZapata: ApuZapata }>>(
+    `/presupuestos/${presupuestoId}/zapatas/vista-previa`,
+    entrada,
+  );
+  return data.data.apuZapata;
 }
 
 export async function actualizarZapataElemento(

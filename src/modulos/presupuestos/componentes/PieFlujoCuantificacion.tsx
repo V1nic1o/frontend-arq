@@ -45,47 +45,49 @@ export function PieFlujoCuantificacion({
   const tituloSiguiente = siguiente ? tituloElemento(siguiente) : null;
 
   return (
-    <div className="sticky bottom-20 z-10 -mx-1 mt-2 sm:bottom-4">
-      <div className="rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur-sm sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-5">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">
-            {cantidadRegistros} {etiquetaRegistro}
-          </p>
-          {resumen ? <p className="mt-0.5 truncate text-sm text-gray-500">{resumen}</p> : null}
-        </div>
+    <div className="fixed inset-x-0 bottom-16 z-20 px-4 sm:static sm:inset-auto sm:bottom-auto sm:px-0">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="flex w-full flex-col gap-3 rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900">
+              {cantidadRegistros} {etiquetaRegistro}
+            </p>
+            {resumen ? <p className="mt-0.5 truncate text-sm text-gray-500">{resumen}</p> : null}
+          </div>
 
-        <div className="mt-3 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:items-center">
-          {onAgregarOtro ? (
-            <button
-              type="button"
-              onClick={onAgregarOtro}
-              className="text-sm font-medium text-gray-600 transition-colors hover:text-sky-600"
-            >
-              Agregar otra
-            </button>
-          ) : null}
+          <div className="flex w-full flex-col gap-2 sm:mt-0 sm:w-auto sm:flex-row sm:items-center">
+            {onAgregarOtro ? (
+              <button
+                type="button"
+                onClick={onAgregarOtro}
+                className="text-sm font-medium text-gray-600 transition-colors hover:text-sky-600"
+              >
+                Agregar otra
+              </button>
+            ) : null}
 
-          {siguiente ? (
-            <Link
-              to={rutaCuantificarElemento(presupuestoId, siguiente)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-500"
-            >
-              Siguiente: {tituloSiguiente}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          ) : (
-            <Boton
-              type="button"
-              anchoCompleto={false}
-              className="sm:min-w-[11rem]"
-              onClick={() => navigate(rutaPresupuesto(presupuestoId))}
-            >
-              <span className="inline-flex items-center gap-2">
-                Continuar
+            {siguiente ? (
+              <Link
+                to={rutaCuantificarElemento(presupuestoId, siguiente)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-500 sm:w-auto"
+              >
+                Siguiente: {tituloSiguiente}
                 <ArrowRight className="h-4 w-4" />
-              </span>
-            </Boton>
-          )}
+              </Link>
+            ) : (
+              <Boton
+                type="button"
+                anchoCompleto
+                className="sm:min-w-44 sm:w-auto"
+                onClick={() => navigate(rutaPresupuesto(presupuestoId))}
+              >
+                <span className="inline-flex items-center justify-center gap-2">
+                  Continuar
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </Boton>
+            )}
+          </div>
         </div>
       </div>
     </div>

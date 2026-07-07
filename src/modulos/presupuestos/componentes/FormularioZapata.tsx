@@ -1,19 +1,48 @@
-import { FormEvent, useState, type ReactNode } from 'react';
-import { Plus } from 'lucide-react';
+import { FormEvent, useMemo, useState, type ReactNode } from 'react';
+import {
+  Box,
+  Calculator,
+  Hammer,
+  Layers3,
+  Plus,
+  Shovel,
+  type LucideIcon,
+} from 'lucide-react';
 import { Boton } from '../../autenticacion/componentes/ui/Boton';
-import { CampoTexto, ESTILO_CAMPO } from '../../autenticacion/componentes/ui/CampoTexto';
-import type { CuantificarZapataEntrada } from '../tipos/presupuestos.tipos';
+import { CampoSelect } from '../../autenticacion/componentes/ui/CampoSelect';
+import { CampoTexto } from '../../autenticacion/componentes/ui/CampoTexto';
+import { ModalVistaPreviaCuantificacionZapata } from './ModalVistaPreviaCuantificacionZapata';
+import { TablaApuZapata } from './TablaApuZapata';
+import { previsualizarCuantificacionZapata } from '../servicios/presupuestos.servicio';
+import type {
+  ApuZapata,
+  CuantificarZapataEntrada,
+  ElementoPresupuesto,
+} from '../tipos/presupuestos.tipos';
 
 type FormularioZapataProps = {
-  onGuardado: () => void;
+  onGuardado: (elemento: ElementoPresupuesto) => void;
   onCancelar?: () => void;
-  cuantificarZapata: (entrada: CuantificarZapataEntrada) => Promise<void>;
+  cuantificarZapata: (entrada: CuantificarZapataEntrada) => Promise<ElementoPresupuesto>;
+  presupuestoId?: string;
+  abrirVistaPreviaTrasGuardar?: boolean;
   compacto?: boolean;
+  mostrarApuAlGuardar?: boolean;
   valoresIniciales?: CuantificarZapataEntrada;
   modo?: 'crear' | 'editar';
 };
 
 const DIAMETROS_ACERO = ['3/8"', '1/2"', '5/8"', '3/4"', '1"'];
+
+const OPCIONES_DIAMETRO = DIAMETROS_ACERO.map((diametro) => ({
+  valor: diametro,
+  etiqueta: diametro,
+}));
+
+const OPCIONES_AMBOS_SENTIDOS = [
+  { valor: 'si', etiqueta: 'Sí' },
+  { valor: 'no', etiqueta: 'No' },
+];
 
 const VALORES_DEFECTO: CuantificarZapataEntrada = {
   cantidad: 12,
@@ -43,28 +72,57 @@ function valoresAString(v: CuantificarZapataEntrada) {
   };
 }
 
-function GrupoFormulario({
+function SeccionFormulario({
   titulo,
+  descripcion,
+  icono: Icono,
   children,
+  className = '',
 }: {
   titulo: string;
+  descripcion?: string;
+  icono: LucideIcon;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <fieldset className="grid gap-4">
-      <legend className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-        {titulo}
-      </legend>
+    <section
+      className={[
+        'rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm sm:p-5',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 ring-1 ring-sky-100">
+          <Icono className="h-4 w-4" aria-hidden />
+        </div>
+        <div className="min-w-0 pt-0.5">
+          <h3 className="text-sm font-semibold text-gray-900">{titulo}</h3>
+          {descripcion ? (
+            <p className="mt-0.5 text-xs leading-relaxed text-gray-500">{descripcion}</p>
+          ) : null}
+        </div>
+      </div>
       {children}
-    </fieldset>
+    </section>
   );
+}
+
+function formatearMedida(valor: string) {
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero.toFixed(2) : valor;
 }
 
 export function FormularioZapata({
   onGuardado,
   onCancelar,
   cuantificarZapata,
+  presupuestoId,
+  abrirVistaPreviaTrasGuardar = true,
   compacto = false,
+  mostrarApuAlGuardar = false,
   valoresIniciales,
   modo = 'crear',
 }: FormularioZapataProps) {
@@ -81,26 +139,91 @@ export function FormularioZapata({
   const [resistenciaConcreto, setResistenciaConcreto] = useState(iniciales.resistenciaConcreto);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [ultimaCuantificacion, setUltimaCuantificacion] = useState<ElementoPresupuesto | null>(
+    null,
+  );
+  const [modalVistaPreviaAbierto, setModalVistaPreviaAbierto] = useState(false);
+  const [apuVistaPrevia, setApuVistaPrevia] = useState<ApuZapata | null>(null);
+  const [cargandoVistaPrevia, setCargandoVistaPrevia] = useState(false);
+  const [errorVistaPrevia, setErrorVistaPrevia] = useState<string | null>(null);
+
+  const resumenMedidas = useMemo(() => {
+    const unidades = Number(cantidad);
+    const medidas = [largo, ancho, espesor].every((valor) => valor.trim() !== '');
+
+    if (!medidas) {
+      return null;
+    }
+
+    const textoUnidades = Number.isFinite(unidades) && unidades > 0 ? `${unidades} und` : '— und';
+    return `${textoUnidades} · ${formatearMedida(largo)} × ${formatearMedida(ancho)} × ${formatearMedida(espesor)} m · f'c ${resistenciaConcreto} PSI · ${diametroAcero}`;
+  }, [ancho, cantidad, diametroAcero, espesor, largo, resistenciaConcreto]);
+
+  function obtenerEntradaDesdeForm(): CuantificarZapataEntrada {
+    return {
+      cantidad: Number(cantidad),
+      largo: Number(largo),
+      ancho: Number(ancho),
+      espesor: Number(espesor),
+      profundidad: Number(profundidad),
+      recubrimiento: Number(recubrimiento),
+      diametroAcero,
+      espaciamientoVarillas: Number(espaciamientoVarillas),
+      ambosSentidos,
+      resistenciaConcreto: Number(resistenciaConcreto),
+    };
+  }
+
+  function abrirModalVistaPrevia(apu: ApuZapata) {
+    setApuVistaPrevia(apu);
+    setErrorVistaPrevia(null);
+    setModalVistaPreviaAbierto(true);
+  }
+
+  async function manejarVerCuantificacion() {
+    if (!presupuestoId) {
+      return;
+    }
+
+    setCargandoVistaPrevia(true);
+    setErrorVistaPrevia(null);
+    setModalVistaPreviaAbierto(true);
+    setApuVistaPrevia(null);
+
+    try {
+      const apu = await previsualizarCuantificacionZapata(presupuestoId, obtenerEntradaDesdeForm());
+      if (!apu) {
+        throw new Error('No se pudo calcular la cuantificación');
+      }
+      setApuVistaPrevia(apu);
+    } catch (err: unknown) {
+      setErrorVistaPrevia(
+        err instanceof Error ? err.message : 'No se pudo calcular la vista previa',
+      );
+    } finally {
+      setCargandoVistaPrevia(false);
+    }
+  }
 
   async function manejarEnvio(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setError(null);
     setEnviando(true);
+    setUltimaCuantificacion(null);
 
     try {
-      await cuantificarZapata({
-        cantidad: Number(cantidad),
-        largo: Number(largo),
-        ancho: Number(ancho),
-        espesor: Number(espesor),
-        profundidad: Number(profundidad),
-        recubrimiento: Number(recubrimiento),
-        diametroAcero,
-        espaciamientoVarillas: Number(espaciamientoVarillas),
-        ambosSentidos,
-        resistenciaConcreto: Number(resistenciaConcreto),
-      });
-      onGuardado();
+      const elemento = await cuantificarZapata(obtenerEntradaDesdeForm());
+      setUltimaCuantificacion(elemento);
+      onGuardado(elemento);
+
+      if (
+        abrirVistaPreviaTrasGuardar &&
+        presupuestoId &&
+        modo === 'crear' &&
+        elemento.apuZapata
+      ) {
+        abrirModalVistaPrevia(elemento.apuZapata);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'No se pudo cuantificar la zapata');
     } finally {
@@ -108,17 +231,45 @@ export function FormularioZapata({
     }
   }
 
-  const columnas = compacto ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
+  const grillaDimensiones = compacto
+    ? 'grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4'
+    : 'grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-5';
+  const grillaTecnica = compacto
+    ? 'grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4'
+    : 'grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4';
+  const grillaInferior = compacto
+    ? 'grid gap-4 lg:grid-cols-2'
+    : 'grid gap-4 lg:grid-cols-2 xl:grid-cols-12';
+
+  const puedeVerCuantificacion = Boolean(presupuestoId) && modo === 'crear';
 
   return (
-    <form className="grid gap-6" onSubmit={manejarEnvio}>
-      <GrupoFormulario titulo="Dimensiones">
-        <div className={`grid gap-4 ${columnas}`}>
+    <>
+    <form className="grid gap-4" onSubmit={manejarEnvio}>
+      {resumenMedidas && modo === 'crear' ? (
+        <div className="flex flex-col gap-2 rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex items-center gap-2 text-sky-700">
+            <Layers3 className="h-4 w-4 shrink-0" aria-hidden />
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700/80">
+              Medidas ingresadas
+            </p>
+          </div>
+          <p className="min-w-0 text-sm font-medium text-sky-900 sm:flex-1">{resumenMedidas}</p>
+        </div>
+      ) : null}
+
+      <SeccionFormulario
+        icono={Box}
+        titulo="Dimensiones"
+        descripcion="Cantidad y medidas de la zapata en metros."
+      >
+        <div className={grillaDimensiones}>
           <CampoTexto
             etiqueta="Cantidad"
             name="cantidad"
             type="number"
             min={1}
+            inputMode="numeric"
             value={cantidad}
             onChange={(evento) => setCantidad(evento.target.value)}
             required
@@ -129,6 +280,7 @@ export function FormularioZapata({
             type="number"
             min={0}
             step="0.01"
+            inputMode="decimal"
             value={largo}
             onChange={(evento) => setLargo(evento.target.value)}
             required
@@ -139,6 +291,7 @@ export function FormularioZapata({
             type="number"
             min={0}
             step="0.01"
+            inputMode="decimal"
             value={ancho}
             onChange={(evento) => setAncho(evento.target.value)}
             required
@@ -149,105 +302,136 @@ export function FormularioZapata({
             type="number"
             min={0}
             step="0.01"
+            inputMode="decimal"
             value={espesor}
             onChange={(evento) => setEspesor(evento.target.value)}
             required
           />
         </div>
-      </GrupoFormulario>
+      </SeccionFormulario>
 
-      <GrupoFormulario titulo="Excavación">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <CampoTexto
-            etiqueta="Profundidad (m)"
-            name="profundidad"
-            type="number"
-            min={0}
-            step="0.01"
-            value={profundidad}
-            onChange={(evento) => setProfundidad(evento.target.value)}
-            required
-          />
-          <CampoTexto
-            etiqueta="Recubrimiento (m)"
-            name="recubrimiento"
-            type="number"
-            min={0}
-            step="0.01"
-            value={recubrimiento}
-            onChange={(evento) => setRecubrimiento(evento.target.value)}
-            required
-          />
-        </div>
-      </GrupoFormulario>
+      <div className={grillaInferior}>
+        <SeccionFormulario
+          className={compacto ? undefined : 'xl:col-span-4'}
+          icono={Shovel}
+          titulo="Excavación"
+          descripcion="Profundidad de corte y recubrimiento del acero."
+        >
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <CampoTexto
+              etiqueta="Profundidad (m)"
+              name="profundidad"
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              value={profundidad}
+              onChange={(evento) => setProfundidad(evento.target.value)}
+              required
+            />
+            <CampoTexto
+              etiqueta="Recubrimiento (m)"
+              name="recubrimiento"
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              value={recubrimiento}
+              onChange={(evento) => setRecubrimiento(evento.target.value)}
+              required
+            />
+          </div>
+        </SeccionFormulario>
 
-      <GrupoFormulario titulo="Acero de refuerzo">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="grid gap-1.5" htmlFor="diametro-acero">
-            <span className="text-sm font-medium text-gray-700">Diámetro</span>
-            <select
-              id="diametro-acero"
-              className={ESTILO_CAMPO}
+        <SeccionFormulario
+          className={compacto ? undefined : 'xl:col-span-8'}
+          icono={Hammer}
+          titulo="Acero y concreto"
+          descripcion="Refuerzo y resistencia del concreto."
+        >
+          <div className={grillaTecnica}>
+            <CampoSelect
+              etiqueta="Diámetro"
+              name="diametroAcero"
               value={diametroAcero}
               onChange={(evento) => setDiametroAcero(evento.target.value)}
-            >
-              {DIAMETROS_ACERO.map((opcion) => (
-                <option key={opcion} value={opcion}>
-                  {opcion}
-                </option>
-              ))}
-            </select>
-          </label>
-          <CampoTexto
-            etiqueta="Espaciamiento (m)"
-            name="espaciamientoVarillas"
-            type="number"
-            min={0}
-            step="0.01"
-            value={espaciamientoVarillas}
-            onChange={(evento) => setEspaciamientoVarillas(evento.target.value)}
-            required
-          />
-          <label className="grid gap-1.5" htmlFor="ambos-sentidos">
-            <span className="text-sm font-medium text-gray-700">En ambos sentidos</span>
-            <select
-              id="ambos-sentidos"
-              className={ESTILO_CAMPO}
+              opciones={OPCIONES_DIAMETRO}
+              required
+            />
+            <CampoTexto
+              etiqueta="Espaciamiento (m)"
+              name="espaciamientoVarillas"
+              type="number"
+              min={0}
+              step="0.01"
+              inputMode="decimal"
+              value={espaciamientoVarillas}
+              onChange={(evento) => setEspaciamientoVarillas(evento.target.value)}
+              required
+            />
+            <CampoSelect
+              etiqueta="Ambos sentidos"
+              name="ambosSentidos"
               value={ambosSentidos ? 'si' : 'no'}
               onChange={(evento) => setAmbosSentidos(evento.target.value === 'si')}
-            >
-              <option value="si">Sí</option>
-              <option value="no">No</option>
-            </select>
-          </label>
+              opciones={OPCIONES_AMBOS_SENTIDOS}
+              placeholder="Seleccionar"
+              required
+            />
+            <CampoTexto
+              etiqueta="Resistencia f'c (PSI)"
+              name="resistenciaConcreto"
+              type="number"
+              min={1000}
+              step={100}
+              inputMode="numeric"
+              value={resistenciaConcreto}
+              onChange={(evento) => setResistenciaConcreto(evento.target.value)}
+              required
+            />
+          </div>
+        </SeccionFormulario>
+      </div>
+
+      {error ? (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+      ) : null}
+
+      {mostrarApuAlGuardar && ultimaCuantificacion?.apuZapata ? (
+        <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
+          <p className="mb-3 text-sm font-semibold text-sky-800">Análisis de precio unitario</p>
+          <TablaApuZapata apu={ultimaCuantificacion.apuZapata} compacto />
         </div>
-      </GrupoFormulario>
+      ) : null}
 
-      <GrupoFormulario titulo="Concreto">
-        <div className="max-w-xs">
-          <CampoTexto
-            etiqueta="Resistencia f'c (PSI)"
-            name="resistenciaConcreto"
-            type="number"
-            min={1000}
-            step={100}
-            value={resistenciaConcreto}
-            onChange={(evento) => setResistenciaConcreto(evento.target.value)}
-            required
-          />
-        </div>
-      </GrupoFormulario>
-
-      {error ? <p className="text-sm text-red-500">{error}</p> : null}
-
-      <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+      <div className="flex flex-col gap-3 border-t border-gray-200/80 pt-4 sm:flex-row sm:items-center sm:justify-end">
         {onCancelar ? (
           <Boton type="button" variante="secundario" anchoCompleto={false} onClick={onCancelar}>
             Cancelar
           </Boton>
         ) : null}
-        <Boton type="submit" anchoCompleto={false} disabled={enviando}>
-          <span className="inline-flex items-center gap-2">
+        {puedeVerCuantificacion ? (
+          <Boton
+            type="button"
+            variante="secundario"
+            anchoCompleto={!onCancelar}
+            disabled={enviando || cargandoVistaPrevia}
+            className="sm:min-w-48"
+            onClick={() => void manejarVerCuantificacion()}
+          >
+            <span className="inline-flex items-center justify-center gap-2">
+              <Calculator className="h-4 w-4" />
+              {cargandoVistaPrevia ? 'Calculando...' : 'Ver cuantificación'}
+            </span>
+          </Boton>
+        ) : null}
+        <Boton
+          type="submit"
+          anchoCompleto={!onCancelar && !puedeVerCuantificacion}
+          disabled={enviando}
+          className="sm:min-w-48"
+        >
+          <span className="inline-flex items-center justify-center gap-2">
             {modo === 'editar' ? null : <Plus className="h-4 w-4" />}
             {enviando
               ? 'Calculando...'
@@ -258,5 +442,15 @@ export function FormularioZapata({
         </Boton>
       </div>
     </form>
+
+    <ModalVistaPreviaCuantificacionZapata
+      abierto={modalVistaPreviaAbierto}
+      apu={apuVistaPrevia}
+      cargando={cargandoVistaPrevia}
+      error={errorVistaPrevia}
+      subtitulo="Cemento, hierro, arena, piedrín, mano de obra y equipo según las medidas ingresadas."
+      onCerrar={() => setModalVistaPreviaAbierto(false)}
+    />
+    </>
   );
 }
