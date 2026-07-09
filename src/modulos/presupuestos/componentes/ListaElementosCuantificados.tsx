@@ -129,12 +129,13 @@ export function ListaElementosCuantificados({
       <Modal
         abierto={elementoEditar !== null}
         titulo={`Editar ${elementoEditar ? etiquetaTipo(elementoEditar.tipo).toLowerCase() : 'elemento'}`}
-        tamano="lg"
+        tamano="xl"
         onCerrar={() => setElementoEditar(null)}
       >
         {elementoEditar?.zapata ? (
           <FormularioZapata
             modo="editar"
+            compacto
             valoresIniciales={zapataAEntrada(elementoEditar.zapata)}
             cuantificarZapata={async (entrada) => {
               return await actualizarZapataElemento(elementoEditar.id, entrada);

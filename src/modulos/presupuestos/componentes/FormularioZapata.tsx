@@ -78,29 +78,37 @@ function SeccionFormulario({
   icono: Icono,
   children,
   className = '',
+  compacto = false,
 }: {
   titulo: string;
   descripcion?: string;
   icono: LucideIcon;
   children: ReactNode;
   className?: string;
+  compacto?: boolean;
 }) {
   return (
     <section
       className={[
-        'rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm sm:p-5',
+        'rounded-2xl border border-gray-200/80 bg-white shadow-sm',
+        compacto ? 'p-3 sm:p-4' : 'p-4 sm:p-5',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
     >
-      <div className="mb-4 flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 ring-1 ring-sky-100">
+      <div className={['flex items-start gap-3', compacto ? 'mb-3' : 'mb-4'].join(' ')}>
+        <div
+          className={[
+            'flex shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 ring-1 ring-sky-100',
+            compacto ? 'h-9 w-9' : 'h-10 w-10',
+          ].join(' ')}
+        >
           <Icono className="h-4 w-4" aria-hidden />
         </div>
         <div className="min-w-0 pt-0.5">
           <h3 className="text-sm font-semibold text-gray-900">{titulo}</h3>
-          {descripcion ? (
+          {descripcion && !compacto ? (
             <p className="mt-0.5 text-xs leading-relaxed text-gray-500">{descripcion}</p>
           ) : null}
         </div>
@@ -232,14 +240,17 @@ export function FormularioZapata({
   }
 
   const grillaDimensiones = compacto
-    ? 'grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4'
+    ? 'grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4'
     : 'grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-5';
   const grillaTecnica = compacto
-    ? 'grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4'
+    ? 'grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4'
     : 'grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4';
   const grillaInferior = compacto
-    ? 'grid gap-4 lg:grid-cols-2'
+    ? 'grid gap-4'
     : 'grid gap-4 lg:grid-cols-2 xl:grid-cols-12';
+  const grillaExcavacion = compacto
+    ? 'grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4'
+    : 'grid grid-cols-2 gap-3 sm:gap-4';
 
   const puedeVerCuantificacion = Boolean(presupuestoId) && modo === 'crear';
 
@@ -259,6 +270,7 @@ export function FormularioZapata({
       ) : null}
 
       <SeccionFormulario
+        compacto={compacto}
         icono={Box}
         titulo="Dimensiones"
         descripcion="Cantidad y medidas de la zapata en metros."
@@ -313,11 +325,12 @@ export function FormularioZapata({
       <div className={grillaInferior}>
         <SeccionFormulario
           className={compacto ? undefined : 'xl:col-span-4'}
+          compacto={compacto}
           icono={Shovel}
           titulo="Excavación"
           descripcion="Profundidad de corte y recubrimiento del acero."
         >
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className={grillaExcavacion}>
             <CampoTexto
               etiqueta="Profundidad (m)"
               name="profundidad"
@@ -345,6 +358,7 @@ export function FormularioZapata({
 
         <SeccionFormulario
           className={compacto ? undefined : 'xl:col-span-8'}
+          compacto={compacto}
           icono={Hammer}
           titulo="Acero y concreto"
           descripcion="Refuerzo y resistencia del concreto."
