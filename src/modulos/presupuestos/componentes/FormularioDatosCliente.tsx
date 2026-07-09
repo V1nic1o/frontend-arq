@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Building2, Hash, MapPin, MapPinned, UserRound } from 'lucide-react';
 import { Boton } from '../../autenticacion/componentes/ui/Boton';
+import { PieAccionesFormulario } from '../../autenticacion/componentes/ui/PieAccionesFormulario';
 import { CampoSelect } from '../../autenticacion/componentes/ui/CampoSelect';
 import { CampoTexto } from '../../autenticacion/componentes/ui/CampoTexto';
 import {
@@ -185,14 +186,14 @@ export function FormularioDatosCliente({
 
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
-      <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:justify-end">
-        <Boton type="button" variante="secundario" anchoCompleto={false} onClick={onCancelar}>
+      <PieAccionesFormulario className="border-gray-100">
+        <Boton type="button" variante="secundario" onClick={onCancelar}>
           Cancelar
         </Boton>
-        <Boton type="submit" anchoCompleto={false} disabled={enviando} className="sm:min-w-[10rem]">
+        <Boton type="submit" disabled={enviando}>
           {enviando ? 'Guardando...' : modo === 'editar' ? 'Guardar cambios' : 'Continuar'}
         </Boton>
-      </div>
+      </PieAccionesFormulario>
     </form>
   );
 }

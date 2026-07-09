@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Boton } from '../../autenticacion/componentes/ui/Boton';
+import { PieAccionesFormulario } from '../../autenticacion/componentes/ui/PieAccionesFormulario';
 import { CampoSelect } from '../../autenticacion/componentes/ui/CampoSelect';
 import { CampoTexto } from '../../autenticacion/componentes/ui/CampoTexto';
 import { ModalVistaPreviaCuantificacionZapata } from './ModalVistaPreviaCuantificacionZapata';
@@ -418,9 +419,9 @@ export function FormularioZapata({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 border-t border-gray-200/80 pt-4 sm:flex-row sm:items-center sm:justify-end">
+      <PieAccionesFormulario>
         {onCancelar ? (
-          <Boton type="button" variante="secundario" anchoCompleto={false} onClick={onCancelar}>
+          <Boton type="button" variante="secundario" onClick={onCancelar}>
             Cancelar
           </Boton>
         ) : null}
@@ -428,9 +429,7 @@ export function FormularioZapata({
           <Boton
             type="button"
             variante="secundario"
-            anchoCompleto={!onCancelar}
             disabled={enviando || cargandoVistaPrevia}
-            className="sm:min-w-48"
             onClick={() => void manejarVerCuantificacion()}
           >
             <span className="inline-flex items-center justify-center gap-2">
@@ -439,12 +438,7 @@ export function FormularioZapata({
             </span>
           </Boton>
         ) : null}
-        <Boton
-          type="submit"
-          anchoCompleto={!onCancelar && !puedeVerCuantificacion}
-          disabled={enviando}
-          className="sm:min-w-48"
-        >
+        <Boton type="submit" disabled={enviando}>
           <span className="inline-flex items-center justify-center gap-2">
             {modo === 'editar' ? null : <Plus className="h-4 w-4" />}
             {enviando
@@ -454,7 +448,7 @@ export function FormularioZapata({
                 : 'Agregar zapata'}
           </span>
         </Boton>
-      </div>
+      </PieAccionesFormulario>
     </form>
 
     <ModalVistaPreviaCuantificacionZapata
